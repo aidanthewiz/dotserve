@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -24,6 +23,7 @@ type Config struct {
 	port          string
 	user          string
 	passwordStdin bool
+	logging       bool
 	enableNgrok   bool
 }
 
@@ -60,6 +60,7 @@ func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.port, "port", "8080", "port to listen on")
 	flag.StringVar(&cfg.user, "user", "admin", "username for basic auth")
 	flag.BoolVar(&cfg.passwordStdin, "password-stdin", false, "read password from stdin")
+	flag.BoolVar(&cfg.logging, "logging", true, "log requests")
 	flag.BoolVar(&cfg.enableNgrok, "ngrok", false, "expose the server to the internet using ngrok")
 	flag.Parse()
 }
@@ -92,6 +93,10 @@ func createFileServer(cfg *Config) (http.Handler, error) {
 		}
 
 		fileServer = basicAuth(fileServer, cfg.user, password)
+	}
+
+	if cfg.logging {
+		fileServer = logRequest(fileServer)
 	}
 
 	log.Printf("Serving directory \"%s\"\n", cfg.dir)
@@ -216,7 +221,13 @@ func basicAuth(handler http.Handler, user, pass string) http.Handler {
 			return
 		}
 
-		log.Printf("Successful connection from %s", r.RemoteAddr)
+		handler.ServeHTTP(w, r)
+	})
+}
+
+func logRequest(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Remote address: %s, Method: %s, URL: %s", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
 }
