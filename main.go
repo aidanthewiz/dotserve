@@ -89,7 +89,6 @@ func createFileServer(cfg *Config) (http.Handler, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to read password from stdin: %w", err)
 			}
-			password = strings.TrimSpace(password)
 		}
 
 		fileServer = basicAuth(fileServer, cfg.user, password)
