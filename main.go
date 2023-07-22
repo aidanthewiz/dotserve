@@ -3,12 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
-	"crypto/subtle"
 	"flag"
 	"fmt"
-	"golang.ngrok.com/ngrok"
-	"golang.ngrok.com/ngrok/config"
-	"golang.org/x/term"
 	"log"
 	"net/http"
 	"os"
@@ -16,21 +12,27 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"golang.ngrok.com/ngrok"
+	"golang.ngrok.com/ngrok/config"
+	"golang.org/x/term"
 )
 
 type Config struct {
 	dir           string
+	disableBrotli bool
+	disableGzip   bool
+	enableNgrok   bool
+	logging       bool
+	passwordStdin bool
 	port          string
 	user          string
-	passwordStdin bool
-	logging       bool
-	enableNgrok   bool
 }
 
 type App struct {
+	config *Config
 	server *http.Server
 	wg     sync.WaitGroup
-	config *Config
 }
 
 func main() {
@@ -57,11 +59,13 @@ func main() {
 
 func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.dir, "dir", ".", "directory to serve")
+	flag.BoolVar(&cfg.disableGzip, "no-gzip", false, "disable gzip compression")
+	flag.BoolVar(&cfg.disableBrotli, "no-brotli", false, "disable brotli compression")
+	flag.BoolVar(&cfg.enableNgrok, "ngrok", false, "expose the server to the internet using ngrok")
+	flag.BoolVar(&cfg.logging, "no-logging", false, "disable request logging")
+	flag.BoolVar(&cfg.passwordStdin, "password-stdin", false, "read password from stdin")
 	flag.StringVar(&cfg.port, "port", "8080", "port to listen on")
 	flag.StringVar(&cfg.user, "user", "admin", "username for basic auth")
-	flag.BoolVar(&cfg.passwordStdin, "password-stdin", false, "read password from stdin")
-	flag.BoolVar(&cfg.logging, "logging", true, "log requests")
-	flag.BoolVar(&cfg.enableNgrok, "ngrok", false, "expose the server to the internet using ngrok")
 	flag.Parse()
 }
 
@@ -72,35 +76,48 @@ func createFileServer(cfg *Config) (http.Handler, error) {
 
 	fileServer := http.FileServer(http.Dir(cfg.dir))
 
-	if cfg.passwordStdin {
-		var password string
-		var err error
+	if cfg.logging {
+		fileServer = logRequest(fileServer)
+	}
 
-		if term.IsTerminal(syscall.Stdin) {
-			fmt.Print("Enter Password: ")
-			bytePassword, err := term.ReadPassword(syscall.Stdin)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read password from stdin: %w", err)
-			}
-			password = string(bytePassword)
-			fmt.Println()
-		} else {
-			reader := bufio.NewReader(os.Stdin)
-			password, err = reader.ReadString('\n')
-			if err != nil {
-				return nil, fmt.Errorf("failed to read password from stdin: %w", err)
-			}
+	if !cfg.disableGzip || !cfg.disableBrotli {
+		fileServer = compressHandler(fileServer, cfg.disableGzip, cfg.disableBrotli)
+	}
+
+	if cfg.passwordStdin {
+		password, err := getPasswordFromStdin()
+		if err != nil {
+			return nil, err
 		}
 
 		fileServer = basicAuth(fileServer, cfg.user, password)
 	}
 
-	if cfg.logging {
-		fileServer = logRequest(fileServer)
-	}
-
 	log.Printf("Serving directory \"%s\"\n", cfg.dir)
 	return fileServer, nil
+}
+
+func getPasswordFromStdin() (string, error) {
+	var password string
+	var err error
+
+	if term.IsTerminal(syscall.Stdin) {
+		fmt.Print("Enter Password: ")
+		bytePassword, err := term.ReadPassword(syscall.Stdin)
+		if err != nil {
+			return "", fmt.Errorf("failed to read password from stdin: %w", err)
+		}
+		password = string(bytePassword)
+		fmt.Println()
+	} else {
+		reader := bufio.NewReader(os.Stdin)
+		password, err = reader.ReadString('\n')
+		if err != nil {
+			return "", fmt.Errorf("failed to read password from stdin: %w", err)
+		}
+	}
+
+	return password, nil
 }
 
 func (app *App) startServer(ctx context.Context, addr string, handler http.Handler) error {
@@ -202,32 +219,4 @@ func (app *App) ngrokRestartHandler(ctx context.Context, sess ngrok.Session) err
 	}()
 
 	return nil
-}
-
-func basicAuth(handler http.Handler, user, pass string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		u, p, ok := r.BasicAuth()
-
-		userLengthMatch := subtle.ConstantTimeEq(int32(len(u)), int32(len(user)))
-		passLengthMatch := subtle.ConstantTimeEq(int32(len(p)), int32(len(pass)))
-		userMatch := subtle.ConstantTimeCompare([]byte(u), []byte(user))
-		passMatch := subtle.ConstantTimeCompare([]byte(p), []byte(pass))
-		isEqual := userLengthMatch & passLengthMatch & userMatch & passMatch
-
-		if !ok || isEqual != 1 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="."`)
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			log.Printf("Unauthorized access attempt from %s", r.RemoteAddr)
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-	})
-}
-
-func logRequest(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Remote address: %s, Method: %s, URL: %s", r.RemoteAddr, r.Method, r.URL)
-		handler.ServeHTTP(w, r)
-	})
 }

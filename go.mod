@@ -3,6 +3,8 @@ module github.com/aidanthewiz/dotserve
 go 1.20
 
 require (
+	github.com/andybalholm/brotli v1.0.5
+	github.com/klauspost/compress v1.16.7
 	golang.ngrok.com/ngrok v1.3.1
 	golang.org/x/term v0.10.0
 )
