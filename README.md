@@ -9,10 +9,13 @@ using [ngrok](https://ngrok.com/).
 You can configure the application by passing command line flags. The available flags are:
 
 - `-dir`: Set the directory to serve (default is the current directory)
+- `-no-brotli`: Disable brotli compression (default is `false`)
+- `-no-gzip`: Disable gzip compression (default is `false`)
+- `-no-logging`: Disable request logging (default is `false`)
+- `-ngrok`: Expose the server to the internet using ngrok (default is `false`)
+- `-password-stdin`: Read the password for basic authentication from stdin (default is `false`)
 - `-port`: Set the port to listen on (default is `8080`)
 - `-user`: Set the username for basic authentication (default is `admin`)
-- `-password-stdin`: Read the password for basic authentication from stdin (default is `false`)
-- `-ngrok`: Expose the server to the internet using ngrok (default is `false`)
 
 ## :computer: Usage
 
@@ -37,6 +40,24 @@ You can set the username for basic authentication using the `-user` flag. By def
 
 If the `-password-stdin` flag is set, the application will prompt for a password on startup. This password will be used
 for basic authentication along with the username set by the `-user` flag.
+
+## :compression: Compression
+
+This application uses brotli and gzip compression for the HTTP responses by default.
+The Accept-Encoding request header is used to determine which type of compression should be applied.
+
+You can disable brotli and gzip compression individually by setting the -no-brotli and -no-gzip flags respectively when running the application.
+
+If the request contains the conditional headers If-None-Match or If-Modified-Since, compression is bypassed.
+
+Here's how to run the application with brotli compression disabled:
+
+```shell
+go run main.go -dir ./public -port 3000 -user frodo -password-stdin -no-brotli
+````
+
+This will serve the ./public directory on port 3000, with the username frodo for basic authentication, with brotli compression disabled.
+Therefore, the application will only use gzip compression.
 
 ## :globe_with_meridians: Ngrok Integration
 

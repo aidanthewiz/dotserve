@@ -19,14 +19,14 @@ import (
 )
 
 type Config struct {
-	dir           string
-	disableBrotli bool
-	disableGzip   bool
-	enableNgrok   bool
-	logging       bool
-	passwordStdin bool
-	port          string
-	user          string
+	dir            string
+	disableBrotli  bool
+	disableGzip    bool
+	disableLogging bool
+	enableNgrok    bool
+	passwordStdin  bool
+	port           string
+	user           string
 }
 
 type App struct {
@@ -58,14 +58,14 @@ func main() {
 }
 
 func parseFlags(cfg *Config) {
-	flag.StringVar(&cfg.dir, "dir", ".", "directory to serve")
-	flag.BoolVar(&cfg.disableGzip, "no-gzip", false, "disable gzip compression")
-	flag.BoolVar(&cfg.disableBrotli, "no-brotli", false, "disable brotli compression")
-	flag.BoolVar(&cfg.enableNgrok, "ngrok", false, "expose the server to the internet using ngrok")
-	flag.BoolVar(&cfg.logging, "no-logging", false, "disable request logging")
-	flag.BoolVar(&cfg.passwordStdin, "password-stdin", false, "read password from stdin")
-	flag.StringVar(&cfg.port, "port", "8080", "port to listen on")
-	flag.StringVar(&cfg.user, "user", "admin", "username for basic auth")
+	flag.StringVar(&cfg.dir, "dir", ".", "Set the directory to serve")
+	flag.BoolVar(&cfg.disableBrotli, "no-brotli", false, "Disable brotli compression")
+	flag.BoolVar(&cfg.disableGzip, "no-gzip", false, "Disable gzip compression")
+	flag.BoolVar(&cfg.disableLogging, "no-logging", false, "Disable request logging")
+	flag.BoolVar(&cfg.enableNgrok, "ngrok", false, "Expose the server to the internet using ngrok")
+	flag.BoolVar(&cfg.passwordStdin, "password-stdin", false, "Read the password for basic authentication from stdin")
+	flag.StringVar(&cfg.port, "port", "8080", "Set the port to listen on")
+	flag.StringVar(&cfg.user, "user", "admin", "Set the username for basic authentication")
 	flag.Parse()
 }
 
@@ -76,7 +76,7 @@ func createFileServer(cfg *Config) (http.Handler, error) {
 
 	fileServer := http.FileServer(http.Dir(cfg.dir))
 
-	if cfg.logging {
+	if !cfg.disableLogging {
 		fileServer = logRequest(fileServer)
 	}
 
