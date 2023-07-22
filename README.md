@@ -41,7 +41,7 @@ You can set the username for basic authentication using the `-user` flag. By def
 If the `-password-stdin` flag is set, the application will prompt for a password on startup. This password will be used
 for basic authentication along with the username set by the `-user` flag.
 
-## :compression: Compression
+## :package: Compression
 
 This application uses brotli and gzip compression for the HTTP responses by default.
 The Accept-Encoding request header is used to determine which type of compression should be applied.
