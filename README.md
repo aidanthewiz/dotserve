@@ -4,6 +4,16 @@ This project is a Go application that serves a directory over HTTP. It provides 
 serve, the port to listen on, and basic authentication credentials. It also supports exposing the server to the internet
 using [ngrok](https://ngrok.com/).
 
+## :zap: Installation
+
+First, you need to have Go installed on your machine. If you haven't installed it yet, you can download it from [here](https://go.dev/dl/).
+Alternatively, you can install Go with your preferred package manager.
+
+Once Go is installed, you can install dotserve by running the following command:
+```bash
+go install github.com/aidanthewiz/dotserve/cmd/dotserve@latest
+```
+
 ## :wrench: Configuration
 
 You can configure the application by passing command line flags. The available flags are:
@@ -22,13 +32,13 @@ You can configure the application by passing command line flags. The available f
 To start the server, simply run the application with the desired flags. For example:
 
 ```shell
-go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
+dotserve -dir ./public -port 3000 -user frodo -password-stdin -ngrok
 ```
 
 or
 
 ```shell
-echo "password" | go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
+echo "password" | dotserve -dir ./public -port 3000 -user frodo -password-stdin -ngrok
 ```
 
 This will serve the `./public` directory on port `3000`, with the username `frodo` for basic authentication. The
@@ -53,7 +63,7 @@ If the request contains the conditional headers If-None-Match or If-Modified-Sin
 Here's how to run the application with brotli compression disabled:
 
 ```shell
-go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -no-brotli
+dotserve -dir ./public -port 3000 -user frodo -password-stdin -no-brotli
 ````
 
 This will serve the ./public directory on port 3000, with the username frodo for basic authentication, with brotli compression disabled.
@@ -67,5 +77,5 @@ auth token using the `NGROK_AUTHTOKEN` environment variable.
 For example:
 
 ```shell
-NGROK_AUTHTOKEN=your_ngrok_auth_token go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
+NGROK_AUTHTOKEN=your_ngrok_auth_token dotserve -dir ./public -port 3000 -user frodo -password-stdin -ngrok
 ```
