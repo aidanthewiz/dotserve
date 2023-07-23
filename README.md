@@ -22,7 +22,7 @@ You can configure the application by passing command line flags. The available f
 To start the server, simply run the application with the desired flags. For example:
 
 ```shell
-go run main.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
+go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
 ```
 
 or
