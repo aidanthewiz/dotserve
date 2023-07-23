@@ -49,7 +49,7 @@ func (app *App) createFileServer() (http.Handler, error) {
 	fileServer := http.FileServer(http.Dir(app.config.dir))
 
 	if !app.config.disableLogging {
-		fileServer = middleware.LogRequest(fileServer)
+		fileServer = middleware.LogHandler(fileServer)
 	}
 
 	if !app.config.disableGzip || !app.config.disableBrotli {
@@ -57,7 +57,7 @@ func (app *App) createFileServer() (http.Handler, error) {
 	}
 
 	if app.config.passwordStdin {
-		fileServer = middleware.BasicAuth(fileServer, app.config.user)
+		fileServer = middleware.AuthHandler(fileServer, app.config.user)
 	}
 
 	log.Printf("Serving directory \"%s\"\n", app.config.dir)
