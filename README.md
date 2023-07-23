@@ -14,7 +14,7 @@ You can configure the application by passing command line flags. The available f
 - `-no-logging`: Disable request logging (default is `false`)
 - `-ngrok`: Expose the server to the internet using ngrok (default is `false`)
 - `-password-stdin`: Read the password for basic authentication from stdin (default is `false`)
-- `-port`: Set the port to listen on (default is `8080`)
+- `-port`: Set the port to listen on, use 0 to choose a random port (default is `0`)
 - `-user`: Set the username for basic authentication (default is `admin`)
 
 ## :computer: Usage
@@ -28,7 +28,7 @@ go run main.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
 or
 
 ```shell
-echo "password" | go run main.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
+echo "password" | go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
 ```
 
 This will serve the `./public` directory on port `3000`, with the username `frodo` for basic authentication. The
@@ -53,7 +53,7 @@ If the request contains the conditional headers If-None-Match or If-Modified-Sin
 Here's how to run the application with brotli compression disabled:
 
 ```shell
-go run main.go -dir ./public -port 3000 -user frodo -password-stdin -no-brotli
+go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -no-brotli
 ````
 
 This will serve the ./public directory on port 3000, with the username frodo for basic authentication, with brotli compression disabled.
@@ -67,5 +67,5 @@ auth token using the `NGROK_AUTHTOKEN` environment variable.
 For example:
 
 ```shell
-NGROK_AUTHTOKEN=your_ngrok_auth_token go run main.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
+NGROK_AUTHTOKEN=your_ngrok_auth_token go run cmd/dotserve/*.go -dir ./public -port 3000 -user frodo -password-stdin -ngrok
 ```

@@ -1,14 +1,19 @@
-package main
+package middleware
 
 import (
+	"bufio"
 	"crypto/subtle"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+	"syscall"
 
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/gzip"
+	"golang.org/x/term"
 )
 
 type compressResponseWriter struct {
@@ -20,7 +25,7 @@ func (w *compressResponseWriter) Write(b []byte) (int, error) {
 	return w.cw.Write(b)
 }
 
-func compressHandler(h http.Handler, disableGzip, disableBrotli bool) http.Handler {
+func CompressHandler(h http.Handler, disableGzip, disableBrotli bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Bypass compression if the request contains the conditional headers "If-None-Match" or "If-Modified-Since".
 		// These headers may lead to a 304 Not Modified response,
@@ -58,14 +63,19 @@ func compressHandler(h http.Handler, disableGzip, disableBrotli bool) http.Handl
 	})
 }
 
-func basicAuth(handler http.Handler, user, pass string) http.Handler {
+func BasicAuth(handler http.Handler, user string) http.Handler {
+	password, err := getPasswordFromStdin()
+	if err != nil {
+		log.Fatal("Failed to read password from stdin: ", err)
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
 
 		userLengthMatch := subtle.ConstantTimeEq(int32(len(u)), int32(len(user)))
-		passLengthMatch := subtle.ConstantTimeEq(int32(len(p)), int32(len(pass)))
+		passLengthMatch := subtle.ConstantTimeEq(int32(len(p)), int32(len(password)))
 		userMatch := subtle.ConstantTimeCompare([]byte(u), []byte(user))
-		passMatch := subtle.ConstantTimeCompare([]byte(p), []byte(pass))
+		passMatch := subtle.ConstantTimeCompare([]byte(p), []byte(password))
 		isEqual := userLengthMatch & passLengthMatch & userMatch & passMatch
 
 		if !ok || isEqual != 1 {
@@ -79,9 +89,32 @@ func basicAuth(handler http.Handler, user, pass string) http.Handler {
 	})
 }
 
-func logRequest(handler http.Handler) http.Handler {
+func LogRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Remote address: %s, Method: %s, URL: %s", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func getPasswordFromStdin() (string, error) {
+	var password string
+	var err error
+
+	if term.IsTerminal(syscall.Stdin) {
+		fmt.Print("Enter Password: ")
+		bytePassword, err := term.ReadPassword(syscall.Stdin)
+		if err != nil {
+			return "", fmt.Errorf("failed to read password from stdin: %w", err)
+		}
+		password = string(bytePassword)
+		fmt.Println()
+	} else {
+		reader := bufio.NewReader(os.Stdin)
+		password, err = reader.ReadString('\n')
+		if err != nil {
+			return "", fmt.Errorf("failed to read password from stdin: %w", err)
+		}
+	}
+
+	return password, nil
 }
